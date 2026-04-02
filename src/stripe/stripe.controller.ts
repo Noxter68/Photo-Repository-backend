@@ -67,9 +67,9 @@ export class StripeController {
       });
 
       // Send license key by email
-      await this.mailService.sendLicenseKey(email, license.key);
+      await this.mailService.sendLicenseKey(email, license.key, name);
 
-      console.log(`License ${license.key} generated for ${name ?? email} and sent to ${email}`);
+      console.log(`[WEBHOOK] ✅ Checkout completed | session=${session.id} | email=${email} | name=${name ?? 'N/A'} | key=${license.key}`);
     }
 
     return { received: true };
