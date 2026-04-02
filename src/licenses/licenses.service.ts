@@ -38,6 +38,11 @@ export class LicensesService {
     return { key: license.key, email: license.email, maxMachines: license.maxMachines };
   }
 
+  /** Find a license by Stripe session ID (for dedup) */
+  async findBySessionId(sessionId: string) {
+    return this.prisma.license.findUnique({ where: { stripeSessionId: sessionId } });
+  }
+
   /** Activate a license on a machine */
   async activate(key: string, machineId: string) {
     const license = await this.prisma.license.findUnique({

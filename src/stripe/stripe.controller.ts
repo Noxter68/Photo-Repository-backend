@@ -49,7 +49,14 @@ export class StripeController {
       const email = customer?.email ?? session.customer_email;
 
       if (!email) {
-        console.error('No email found in checkout session:', session.id);
+        console.error('[WEBHOOK] No email found in checkout session:', session.id);
+        return { received: true };
+      }
+
+      // Check if this session was already processed (Stripe retries on failure)
+      const existing = await this.licensesService.findBySessionId(session.id);
+      if (existing) {
+        console.log(`[WEBHOOK] ⏭ Session ${session.id} already processed, skipping`);
         return { received: true };
       }
 
@@ -67,9 +74,12 @@ export class StripeController {
       });
 
       // Send license key by email
-      await this.mailService.sendLicenseKey(email, license.key, name);
-
-      console.log(`[WEBHOOK] ✅ Checkout completed | session=${session.id} | email=${email} | name=${name ?? 'N/A'} | key=${license.key}`);
+      try {
+        await this.mailService.sendLicenseKey(email, license.key, name);
+        console.log(`[WEBHOOK] ✅ Checkout completed | session=${session.id} | email=${email} | name=${name ?? 'N/A'} | key=${license.key}`);
+      } catch (err) {
+        console.error(`[WEBHOOK] ⚠ License ${license.key} generated but email failed for ${email}:`, err);
+      }
     }
 
     return { received: true };
