@@ -8,19 +8,35 @@ export class MailService {
   private resend: Resend;
   private fromEmail: string;
   private downloadUrl: string;
+  private contactEmail: string;
 
   constructor(private config: ConfigService) {
     this.resend = new Resend(this.config.get<string>('RESEND_API_KEY'));
-    this.fromEmail = this.config.get<string>('FROM_EMAIL') ?? 'noreply@photo-organizer.com';
-    this.downloadUrl = this.config.get<string>('DOWNLOAD_URL') ?? '#';
+    this.fromEmail = this.config.get<string>('FROM_EMAIL') ?? 'contact@photorganizer.org';
+    this.downloadUrl = this.config.get<string>('DOWNLOAD_URL') ?? '';
+    this.contactEmail = this.config.get<string>('CONTACT_EMAIL') ?? 'contact@photorganizer.org';
+
+    this.logger.log(`Download URL configured: ${this.downloadUrl || '(not set)'}`);
   }
 
   async sendLicenseKey(email: string, licenseKey: string, customerName?: string) {
     const greeting = customerName ? `Bonjour ${customerName},` : 'Bonjour,';
 
+    const downloadButton = this.downloadUrl
+      ? `
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${this.downloadUrl}" style="display: inline-block; background: #155DFC; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+              Télécharger Photo Organizer
+            </a>
+            <p style="color: #999; font-size: 11px; margin-top: 8px;">Besoin de réinstaller ? Utilisez ce bouton.</p>
+          </div>
+        `
+      : '';
+
     const { data, error } = await this.resend.emails.send({
       from: this.fromEmail,
       to: email,
+      replyTo: this.contactEmail,
       subject: 'Votre clé de licence Photo Organizer',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
@@ -38,17 +54,12 @@ export class MailService {
             Vous pouvez utiliser cette clé sur 2 machines maximum.
           </p>
 
-          <div style="text-align: center; margin-bottom: 32px;">
-            <a href="${this.downloadUrl}" style="display: inline-block; background: #155DFC; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
-              Télécharger Photo Organizer
-            </a>
-          </div>
+          ${downloadButton}
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;">
           <p style="color: #999; font-size: 12px; line-height: 1.5;">
             Conservez cet email, il contient votre clé de licence.<br>
-            Si vous perdez l'application, utilisez le bouton ci-dessus pour la retélécharger.<br>
-            En cas de problème, contactez-nous en répondant à cet email.
+            En cas de problème, contactez-nous à <a href="mailto:${this.contactEmail}" style="color: #155DFC;">${this.contactEmail}</a>
           </p>
         </div>
       `,
